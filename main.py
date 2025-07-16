@@ -4,10 +4,50 @@
 # 3- Ver productos
 # 4- Buscar producto
 # 5- Salir
-
+import sqlite3
 
 #Lista para guardar los productos.
 productos = []
+
+def cargarDesdeArchivo():
+    try:
+        with open("base.txt", "r", encoding="utf-8") as base:
+            for linea in base:
+                nombre, categoria, precio = linea.strip().split(",")
+                productos.append([nombre, categoria, int(precio)])
+    except FileNotFoundError:
+        pass
+
+cargarDesdeArchivo()
+
+def guardarEnArchivo():
+    with open("base.txt", "w", encoding="utf-8") as base:
+        for producto in productos:
+            base.write(f"{producto[0]},{producto[1]},{producto[2]}\n")
+
+def crearBaseDatos():
+    conexion = sqlite3.connect("productos.db")
+    cursor = conexion.cursor()
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS productos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nombre TEXT NOT NULL,
+        categoria TEXT NOT NULL,
+        precio INTEGER NOT NULL
+        )
+        ''')
+    conexion.commit()
+    conexion.close()
+
+def guardarProductoEnBD (nombre, categoria, precio):
+    conexion = sqlite3.connect("productos.db")
+    cursor = conexion.cursor()
+    cursor.execute("INSERT INTO productos (nombre, categoria, precio) VALUES (?, ?, ?)", (nombre, categoria, precio))
+    conexion.commit()
+    conexion.close()
+
+crearBaseDatos()
 
 #Función para pedir nombre, categoria y precio y que guarde los datos en una sublista
 def agregarProducto():
@@ -19,6 +59,8 @@ def agregarProducto():
     if precio.isdigit():
         precio = int(precio)
         productos.append([nombre, categoria, precio])
+        guardarEnArchivo()
+        guardarProductoEnBD(nombre, categoria, precio)
         print("Producto agregado exitosamente 🎉!")
     else:
         print("Chequeá que el número sea un entero 🙏")
@@ -75,6 +117,7 @@ def eliminarProducto():
         producto = productos[i]
         if producto[0].lower() == nombreBuscado:
             productos.pop(i)
+            guardarEnArchivo()
             print(f"Producto '{producto[0]}' eliminado exitosamente.")
             return
         else:
@@ -113,3 +156,6 @@ while True:
         print("Hasta la próxima!👋🏻")
         break
 
+
+with open("base.txt", "r") as base:
+    print (base.read()) 

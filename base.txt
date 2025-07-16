@@ -1,0 +1,6 @@
+pan,almacen,100
+harina,almacen,300
+aceite,almacen,400
+pan,almacen,400
+pan,almacen,400
+aceite,almacen,600
