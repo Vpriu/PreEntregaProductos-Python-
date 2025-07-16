@@ -1,6 +1,6 @@
 import tkinter as tk
 
-productos = []  # lista donde guardamos los productos
+#productos = []  Ya no usamos más esta lista porque ahora pasamos a Base de datos
 
 def agregar_producto():
     # Crear una ventana nueva (hija)
@@ -44,7 +44,7 @@ def mostrar_productos():
 
 def buscar_producto():
     print(" 🔍 Buscar producto (función en desarrollo)")
-    
+
 def eliminar_producto():
     print("🗑 Eliminar producto (función en desarrollo)")
 

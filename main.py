@@ -4,158 +4,161 @@
 # 3- Ver productos
 # 4- Buscar producto
 # 5- Salir
+
+
+#productos = [] ya no va mas esta lista, ahora armamos una base de datos 
+
 import sqlite3
 
-#Lista para guardar los productos.
-productos = []
 
-def cargarDesdeArchivo():
-    try:
-        with open("base.txt", "r", encoding="utf-8") as base:
-            for linea in base:
-                nombre, categoria, precio = linea.strip().split(",")
-                productos.append([nombre, categoria, int(precio)])
-    except FileNotFoundError:
-        pass
-
-cargarDesdeArchivo()
-
-def guardarEnArchivo():
-    with open("base.txt", "w", encoding="utf-8") as base:
-        for producto in productos:
-            base.write(f"{producto[0]},{producto[1]},{producto[2]}\n")
-
+# Crear la base de datos 
 def crearBaseDatos():
     conexion = sqlite3.connect("productos.db")
     cursor = conexion.cursor()
-
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS productos (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        nombre TEXT NOT NULL,
-        categoria TEXT NOT NULL,
-        precio INTEGER NOT NULL
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nombre TEXT NOT NULL,
+            categoria TEXT NOT NULL,
+            precio INTEGER NOT NULL
         )
-        ''')
+    ''')
     conexion.commit()
     conexion.close()
 
-def guardarProductoEnBD (nombre, categoria, precio):
+
+# Guardar producto en la base de datos porque eliminamos el archivo .txt
+
+def guardarProductoEnBD(nombre, categoria, precio):
     conexion = sqlite3.connect("productos.db")
     cursor = conexion.cursor()
     cursor.execute("INSERT INTO productos (nombre, categoria, precio) VALUES (?, ?, ?)", (nombre, categoria, precio))
     conexion.commit()
     conexion.close()
 
-crearBaseDatos()
 
-#Función para pedir nombre, categoria y precio y que guarde los datos en una sublista
+# Agregar producto desde input
+
 def agregarProducto():
     nombre = input("¿Cuál es el nombre del producto?: ")
     categoria = input("¿Cuál es la categoría del producto?: ")
-
-    # El precio tiene que ser un entero
     precio = input("¿Cuál es el precio del producto (sin centavos)?: ")
+    
     if precio.isdigit():
         precio = int(precio)
-        productos.append([nombre, categoria, precio])
-        guardarEnArchivo()
         guardarProductoEnBD(nombre, categoria, precio)
         print("Producto agregado exitosamente 🎉!")
     else:
         print("Chequeá que el número sea un entero 🙏")
 
-#Creamos una función que muestre los productos
-def mostrarProductos():
-    print("\nLos productos guardados son:")
-    if len(productos) == 0:
-        print ("Todavia no guardaste ningún producto.")
+
+# Mostrar todos los productos guardados desde la BD
+
+def mostrarProductosDesdeBD():
+    conexion = sqlite3.connect("productos.db")
+    cursor = conexion.cursor()
+    cursor.execute("SELECT * FROM productos")
+    productos = cursor.fetchall()
+
+    if not productos:
+        print("\nTodavía no hay productos guardados en la base de datos.")
     else:
-        contador = 1
+        print("\n🧾 Productos guardados en la base de datos:\n")
         for producto in productos:
-            print(f"\n🛒 Producto {contador}:")
-            print(f"  🏷️ Nombre: {producto[0]}")
-            print(f"  🗂️ Categoría: {producto[1]}")
-            print(f"  💲 Precio: {producto[2]}")
-            contador += 1
+            print(f" 🔢ID: {producto[0]}")
+            print(f" 🏷️ Nombre: {producto[1]}")
+            print(f" 🗂️ Categoría: {producto[2]}")
+            print(f" 💲 Precio: {producto[3]}")
+            print("-" * 30)
 
-#Función para buscar productos
-def buscarProducto():
-    tipo = input("Buscamos por nombre o categoría?: ").lower()
+    conexion.close()
 
-    if tipo!="nombre" and tipo !="categoria":
-        print("Perdón, por ahora solo se puede buscar por nombre o categoría")
+
+# Buscar producto por nombre o categoría desde la BD
+
+def buscarProductoDesdeBD():
+    tipo = input("¿Buscamos por ID, nombre o categoría?: ").lower()
+
+    if tipo not in ["id", "nombre", "categoria"]:
+        print("Solo se puede buscar por id, nombre o categoría.")
         return
-    palabra = input("Qué estás buscando?: ").lower()
 
-    print("\n🔎Resultado de la búsqueda:" )
-    encontrados = False
-    contador = 1
-    for producto in productos:
-        campo = producto [0].lower() if tipo == "nombre" else producto[1].lower()
-        if palabra in campo:
-            print(f"\n🛒 Producto {contador}:")
-            print(f" 🏷️ Nombre: {producto[0]}")
-            print(f" 🗂️ Categoría: {producto[1]}")
-            print(f" 💲 Precio: {producto[2]}")
-            encontrados = True
-            contador += 1
+    palabra = input("¿Qué estás buscando?: ").lower()
 
-    if not encontrados:
-        print("Todavía no tenemos productos que coincidan con lo que estás buscando")
-
-
-#Función para eliminar productos
-def eliminarProducto():
-    if len(productos) == 0:
-        print("No hay productos para eliminar.")
-        return
-    nombreBuscado = input("Qué producto necesitás eliminar?: ").lower()
-
-    i = 0
-    while i < len (productos):
-        producto = productos[i]
-        if producto[0].lower() == nombreBuscado:
-            productos.pop(i)
-            guardarEnArchivo()
-            print(f"Producto '{producto[0]}' eliminado exitosamente.")
+    conexion = sqlite3.connect("productos.db")
+    cursor = conexion.cursor()
+    
+    if tipo == "id":
+        if not palabra.isdigit():
+            print("El ID solo puede ser un número.")
             return
-        else:
-            i += 1
+        cursor.execute("SELECT * FROM productos WHERE id = ?", (int(palabra),))
+    else:
+        cursor.execute(f"SELECT * FROM productos WHERE LOWER({tipo}) LIKE ?", ("%" + palabra + "%"))
 
-    print("No tenemos ningún producto con ese nombre")
+    resultados = cursor.fetchall()
+
+    if resultados:
+        print("\n🔎 Resultado de la búsqueda:")
+        for producto in resultados:
+            print(f"\n🛒 Producto {i}:")
+            print(f" 🔢ID: {producto[0]}")
+            print(f" 🏷️ Nombre: {producto[1]}")
+            print(f" 🗂️ Categoría: {producto[2]}")
+            print(f" 💲 Precio: {producto[3]}")
+    else:
+        print("No se encontraron productos que coincidan con la búsqueda.")
+
+    conexion.close()
 
 
-#Armamos el menú principal
+# Eliminar producto por nombre desde la BD
+
+def eliminarProductoDesdeBD():
+    nombre = input("¿Qué producto necesitás eliminar?: ").lower()
+
+    conexion = sqlite3.connect("productos.db")
+    cursor = conexion.cursor()
+    cursor.execute("DELETE FROM productos WHERE LOWER(nombre) = ?", (nombre,))
+    conexion.commit()
+
+    if cursor.rowcount == 0:
+        print("No se encontró ningún producto con ese nombre.")
+    else:
+        print(f"Producto '{nombre}' eliminado exitosamente.")
+
+    conexion.close()
+
+
+# MENÚ PRINCIPAL
+
+crearBaseDatos()  
+
 while True:
-    print("\nEn qué te puedo ayudar?")
+    print("\n📦 ¿En qué te puedo ayudar?")
     print("1. Agregar un producto nuevo ➕")
     print("2. Ver los productos ya cargados 📋")
     print("3. Buscar un producto 🔎")
     print("4. Eliminar producto 🗑️")
     print("5. Salir ")
 
-    opcion = input ("Elegiste una opción?: ")
+    opcion = input("Elegí una opción (1-5): ")
 
     if opcion == "1":
         agregarProducto()
     elif opcion == "2":
-        mostrarProductos()
+        mostrarProductosDesdeBD()
     elif opcion == "3":
-        buscarProducto()
+        buscarProductoDesdeBD()
     elif opcion == "4":
-        eliminarProducto()
+        eliminarProductoDesdeBD()
     elif opcion == "5":
         print("Gracias! Esperamos que vuelvas pronto! 👋🏻")
         break
     else:
         print("Esa opción no existe, probá con números del 1 al 5.")
 
-    volver = input("\n↩️ Querés volver al menú principal? (si/no): ").lower()
+    volver = input("\n↩️ ¿Querés volver al menú principal? (si/no): ").lower()
     if volver != "si":
-        print("Hasta la próxima!👋🏻")
+        print("Hasta la próxima! 👋🏻")
         break
-
-
-with open("base.txt", "r") as base:
-    print (base.read()) 
